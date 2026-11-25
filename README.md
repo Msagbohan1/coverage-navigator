@@ -8,17 +8,32 @@ The project asks:
 
 > **Can AI help identify preventable health-insurance coverage problems before care is delivered—without replacing human judgment?**
 
-Coverage Navigator is designed as a **human-in-the-loop decision-support concept**. The model forecasts whether a scheduled service is likely to encounter a preventable coverage issue, explains the main reasons for the flag, and routes the case to a claims specialist. The specialist verifies the recommendation against benefit documents and makes the final determination.
+Coverage Navigator is designed as a **human-in-the-loop decision-support concept**. The model forecasts whether a scheduled service is likely to encounter a preventable coverage issue, explains the main reasons for the flag, and routes the case to an insurer claims specialist. The specialist verifies the recommendation against the member's benefit documents and makes the final determination.
+
+**Live demo:** https://coverage-navigator-f47ewhli4ni6mrqmqhlzxz.streamlit.app/
+**Project page:** https://msagbohan1.github.io/coverage-navigator/
 
 This repository expands the original academic work into a public-facing portfolio project with a synthetic dataset, exploratory visualizations, a machine-learning demonstration, a Streamlit prototype, governance documentation, pilot design, and GitHub Pages project page.
 
 > **Important:** This is an academic demonstration using synthetic data. It is not a clinical tool, insurance product, or production coverage-determination system.
 
+**Who it is for:** insurer claims teams, hospital intake and prior-authorization staff, analysts, and the CMS and insurer leaders who would approve a pilot. It is a staff-side tool. A patient-facing chatbot was considered and rejected, because it would shift the work of navigating coverage onto patients with limited health literacy, limited English proficiency, or limited digital access.
+
 ---
 
 ## The Policy Problem
 
+| | |
+|---|---|
+| **100 million** | Americans carry medical debt (Levey, 2022) |
+| **14%** | of privately insured adults correctly understand their health insurance (Loewenstein et al., 2013) |
+| **<1%** | of denied claims are appealed (Claxton et al., 2025) |
+
+The current system finds coverage problems **after** care: the claim is denied, the patient receives an unexpected bill, and almost no one appeals. Coverage Navigator finds them **before** care.
+
 The project began with medical debt and was narrowed to the **health-insurance understanding gap**: the difference between what insured patients believe their plan covers and what the plan actually pays.
+
+Post-denial appeal support was considered and rejected. It is reactive, the financial harm has already begun by the time a claim is denied, and no insurer would credibly fund a system built to overturn its own decisions.
 
 Coverage Navigator moves the intervention upstream by identifying potential issues before care, including:
 - missing prior authorization,
@@ -31,24 +46,32 @@ Coverage Navigator moves the intervention upstream by identifying potential issu
 ## Proposed Workflow
 
 ```text
-Appointment scheduled
+Appointment scheduled (hospital or clinic)
         ↓
-Coverage information reviewed
+Coverage Navigator reviews the case in the background
         ↓
-AI-assisted risk forecast
+   ┌────────────────┬─────────────────────────┬──────────────────────────────┐
+ Low risk        High risk               Low confidence
+ → proceeds      → insurer specialist    (new product, missing history,
+   as normal       queue                  conflicting documentation)
+                                          → escalated, model abstains
         ↓
-Potential issue flagged + explanation
+Insurer claims specialist verifies against benefit documents
+and agrees, or overrides with a reason
         ↓
-Claims specialist review
+Specialist contacts the hospital's intake / prior-authorization team
         ↓
-Verify against benefit documents
+Hospital submits what is missing; insurer prior-auth team reviews it
         ↓
-Resolve / contact provider / escalate
-        ↓
-Coverage clarified before care
+Coverage clarified → patient receives care
 ```
 
-The system supports decisions; it does not make autonomous coverage determinations.
+Who does what:
+- **The hospital or clinic** schedules care, and its intake and prior-authorization staff submit requests and fix documentation.
+- **The insurer** employs the claims specialist who reviews flags, and runs its own prior-authorization review.
+- **The model** finds similar past cases and patterns, flags risk, and explains why. It does not read plan rules and does not make coverage decisions.
+
+In a real pilot, Coverage Navigator would sit inside the intake and prior-authorization systems staff already use, not in a separate portal. A tool outside daily workflow is unlikely to be adopted, whatever its accuracy. The Streamlit app is a standalone demo of what that integrated view would show.
 
 ## Model Inputs
 
@@ -62,6 +85,8 @@ The conceptual model uses information available in a pre-service workflow, such 
 - service type.
 
 The public demo uses **synthetic versions** of these variables.
+
+A limitation the synthetic data hides: real denial labels are noisy. In public marketplace claims data, the most common recorded denial reason is a vague "other," at roughly a third of denials. Claims records are also collected for payment, not research, and a medication denied under one diagnosis code may be covered under a more appropriate one. A model trained on these outcomes can learn billing habits rather than true coverage risk.
 
 ## Why Human-in-the-Loop?
 
@@ -78,7 +103,8 @@ In Coverage Navigator:
 | Risk | Why it matters | Mitigation |
 |---|---|---|
 | Inconsistent denial labels | Denial reasons are not standardized across payers | Data-quality audits, label harmonization, abstention |
-| Unequal model performance | Some groups may have less historical data | Subgroup evaluation, multilingual design, fairness monitoring |
+| Unequal model performance | Some groups may have less historical data | Subgroup evaluation, funded multilingual outreach, fairness monitoring |
+| Thin or unreliable data | New plan products, missing history, or conflicting documentation make a score untrustworthy | The model abstains and the case is escalated to a human early |
 | Automation bias | Staff may over-trust an AI recommendation | Human verification, explanations, training, audit logs |
 | Data sharing & privacy | Cross-payer/provider data may be sensitive | Minimum-necessary data, access controls, encryption, governance |
 | Workflow fatigue | Too many false alerts may be ignored | Favor useful, high-confidence alerts; monitor adoption |
@@ -87,18 +113,20 @@ In Coverage Navigator:
 
 The demonstration model is a logistic regression trained on the synthetic dataset (`src/train_model.py`). On a held-out test set it reaches an **ROC AUC of 0.77** — and, at the default classification threshold of 0.50, it misses about three out of five preventable issues.
 
-That is not a result to hide. It is the clearest evidence for this project's central argument.
-
 | Threshold | Recall | Precision | Share of cases sent to review |
 |---|---|---|---|
 | 0.20 | 0.76 | 0.40 | 46% |
 | 0.30 | 0.56 | 0.45 | 30% |
 | 0.40 | 0.49 | 0.58 | 20% |
-| 0.50 | 0.39 | 0.66 | 14% |
+| **0.50 (default)** | **0.39** | **0.66** | **14%** |
 
-A prevention system needs high recall, and high recall here means routing between a third and a half of all appointments to a claims specialist. The threshold therefore decides staffing levels and encodes an institutional judgment about the relative cost of a missed coverage issue versus an unnecessary review.
+**The design deliberately favors precision over recall.** Trust, not information, is the scarce resource. From experience working in health insurance claims: frontline staff quickly stop paying attention to a system that raises too many false alarms, and once they do, it effectively stops existing.
 
-**That judgment is not a modelling decision.** It belongs to the workflow owner, it should be documented and periodically revisited, and it should never be inherited from a library default. The Streamlit demo exposes the threshold as a control for exactly this reason.
+At 0.50, two out of three alerts are real issues and 14% of cases go to review. Catching three-quarters of issues would mean reviewing nearly half of all appointments, with more than half of those alerts false. That is the alert fatigue the design is meant to avoid.
+
+The trade-off is stated openly: at 0.50, roughly three in five preventable issues are not flagged, and those missed cases may not be spread evenly across patient groups. The design answers this with subgroup monitoring and an escalation path for low-confidence cases, not with more alerts.
+
+The threshold is still an institutional judgment, not a modelling one. It belongs to the workflow owner, should be documented and revisited during the pilot, and should never be inherited from a library default. The demo exposes it as a control so the trade-off can be seen.
 
 Subgroup results carry a parallel lesson. Measured AUC ranges from 0.74 to 0.95 across language groups, but three of the four groups have fewer than 60 test cases — small enough that the spread is mostly noise. A fairness monitoring program needs a minimum subgroup sample size defined before results are reviewed, or it will generate apparent disparities that teams either chase needlessly or learn to ignore. Full figures are in `model/model_card.md`.
 
@@ -116,30 +144,33 @@ A successful pilot should measure:
 
 ## Pilot Design
 
-The original proposal asked leadership to approve an **18-month pilot across 25 hospitals and 500 clinics**. That scope was ambitious, so the portfolio version reframes it as a phased rollout.
+The recommendation is an **18-month pilot across 25 hospitals and 500 clinics**, with continuous fairness audits, human oversight at every step, and expansion only if the pilot succeeds.
 
-1. **Months 0–3 — Setup**
-   - data agreements
-   - privacy review
-   - workflow mapping
-   - baseline measurement
+1. **Months 1–6 — Planning & design**
+   - finalize governance and data-sharing agreements
+   - configure the system and baseline measurement
+   - partner onboarding and staff training
 
-2. **Months 4–8 — Limited launch**
-   - selected hospitals and clinics
-   - staff training
-   - model calibration
-   - alert-utility monitoring
+2. **Months 7–12 — Integration & go-live**
+   - integrate with intake and prior-authorization workflows
+   - go live at pilot sites
+   - monitor performance, alert use, and user feedback
 
-3. **Months 9–14 — Expansion**
-   - broader site coverage
-   - subgroup performance review
-   - integration improvements
+3. **Months 13–18 — Evaluation & decision**
+   - measure outcomes and equity
+   - refine the model and workflows
+   - report results to CMS and insurers
+   - decide to scale, adapt, or stop
 
-4. **Months 15–18 — Evaluation**
-   - outcome analysis
-   - cost/benefit review
-   - governance assessment
-   - scale/adapt/stop decision
+Because the 25-hospital scope is ambitious, each phase ends with a governance check before the next one starts. Integration with multiple EHR and practice-management systems is likely to be the slowest part.
+
+## Who Decides: CMS, Insurers, and Providers
+
+The pilot has two executive audiences, **CMS and participating insurers**, and their incentives conflict. Preventing denials improves patient outcomes, but it can also raise insurer spending by stopping denials that would otherwise have saved them money.
+
+Insurers are likely to participate only if fewer appeals, less rework, better member satisfaction, regulatory goodwill, and long-term retention outweigh the additional claims costs. If that balance shifts during the pilot, they may slow data sharing, delay integration, or withdraw, even if the model performs well. Making a credible business case for insurer participation is therefore as important as model performance.
+
+Hospitals and clinics are the third party. Their intake and prior-authorization teams have to act on alerts before care, so the tool has to fit their workflow, not add a new one.
 
 ## Why Now?
 
@@ -163,7 +194,7 @@ This repository does **not invent a dollar estimate**. Instead, it identifies th
 - fairness and performance audits,
 - governance and legal review.
 
-A real pilot would require bottom-up costing from participating organizations. Note that the threshold analysis above makes claims-specialist time the dominant variable cost: a threshold chosen for high recall multiplies review volume several times over.
+A real pilot would require bottom-up costing from participating organizations. The threshold analysis above makes claims-specialist time the dominant variable cost: moving from the 0.50 default to a high-recall threshold such as 0.20 would roughly triple review volume.
 
 ## Repository Structure
 
@@ -218,9 +249,16 @@ The original coursework was assessed as technically sound in its treatment of fo
 - **Cost** — the repository names the real cost drivers rather than inventing a dollar figure it cannot support.
 - **Why now** — an explicit argument that governance design is easier to establish before opaque automation is normalized.
 - **Data sharing and privacy** — treated directly in `docs/governance.md`.
-- **Pilot scale** — the original 25-hospital, 500-clinic ask is replaced by a phased rollout with governance gates between stages.
+- **Pilot scale** — the 25-hospital, 500-clinic pilot keeps its three phases but adds a governance check between each one.
 
-This version also adds what the coursework did not have: a working model, the threshold analysis above, and a demo where the governance trade-off can be manipulated rather than only described.
+This version also adds what the coursework did not have: a working model, the threshold analysis above, a low-confidence escalation path, a specialist queue that records agreements and overrides, and a demo where the governance trade-off can be manipulated rather than only described.
+
+## References
+
+- Claxton et al. (2025). Cited for: fewer than 1% of denied claims are appealed. See also KFF, *Claims Denials and Appeals in ACA Marketplace Plans in 2023* (2025): https://www.kff.org/private-insurance/claims-denials-and-appeals-in-aca-marketplace-plans-in-2023/
+- Desai, P., et al. (2024). *Findings.* Agency for Healthcare Research and Quality (US). https://www.ncbi.nlm.nih.gov/books/NBK617038/
+- Levey, N. N. (2022). Cited for: 100 million Americans carry medical debt. KFF Health News.
+- Loewenstein, G., et al. (2013). Consumers' misunderstanding of health insurance. *Journal of Health Economics*, 32(5), 850–862.
 
 ## Core Takeaway
 

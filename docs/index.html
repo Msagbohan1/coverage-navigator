@@ -27,31 +27,35 @@ footer{text-align:center;padding:35px;color:#65717e}
 <h1>Coverage Navigator</h1>
 <p>AI-assisted pre-service coverage decision support designed to identify preventable coverage issues before care while keeping humans accountable for every final decision.</p>
 <div class="links">
-<a href="#">Try the live demo</a>
-<a class="ghost" href="#">View the code</a>
+<a href="https://coverage-navigator-f47ewhli4ni6mrqmqhlzxz.streamlit.app/">Try the live demo</a>
+<a class="ghost" href="https://github.com/Msagbohan1/coverage-navigator">View the code</a>
 </div>
 </header>
 <div class="container">
 <section class="card"><div class="kicker">The problem</div><h2>Coverage can fail before the claim is ever submitted.</h2>
-<p>The project began with medical debt and narrowed to the health-insurance understanding gap. Coverage Navigator moves the intervention upstream by asking whether potential coverage issues can be identified before care is delivered.</p></section>
+<div class="grid" style="margin:18px 0">
+<div><div style="font-size:2.2rem;font-weight:bold;color:#14243d">100M</div>Americans carry medical debt.<br><small>(Levey, 2022)</small></div>
+<div><div style="font-size:2.2rem;font-weight:bold;color:#14243d">14%</div>of privately insured adults correctly understand their health insurance.<br><small>(Loewenstein et al., 2013)</small></div>
+<div><div style="font-size:2.2rem;font-weight:bold;color:#14243d">&lt;1%</div>of denied claims are appealed.<br><small>(Claxton et al., 2025)</small></div>
+</div>
+<p>Today, coverage problems surface after care: the claim is denied, the patient gets an unexpected bill, and almost no one appeals. The project began with medical debt and narrowed to the health-insurance understanding gap. Coverage Navigator moves the check upstream, to before care is delivered.</p></section>
 
 <section class="card"><div class="kicker">How it works</div><h2>Forecast. Explain. Verify.</h2>
-<pre>Appointment scheduled
+<pre>Appointment scheduled (hospital or clinic)
         ↓
-Coverage information reviewed
+Coverage Navigator reviews the case in the background
         ↓
-AI-assisted risk forecast
+Low risk → proceeds  |  High risk → insurer specialist queue
+Low confidence (new product, missing history, conflicting documentation)
+        → escalated; the model abstains
         ↓
-Potential issue flagged + explanation
+Insurer claims specialist verifies benefit documents,
+agrees or overrides with a reason
         ↓
-Claims specialist review
+Specialist contacts the hospital's intake / prior-auth team
         ↓
-Verify benefit documents
-        ↓
-Resolve / contact provider / escalate
-        ↓
-Coverage clarified before care</pre>
-<p><strong>The model does not make the final coverage decision.</strong> It forecasts risk and explains why a case may need review. A human specialist verifies the case and remains accountable.</p></section>
+Coverage clarified → patient receives care</pre>
+<p><strong>The model does not make the final coverage decision.</strong> It finds similar past cases and patterns, flags risk, and explains why a case may need review. It does not read plan rules. The insurer's claims specialist verifies the case and remains accountable.</p></section>
 
 <section class="grid">
 <div class="card"><div class="kicker">Input</div><h2>Model signals</h2><p>Plan information, prior authorization, network status, documentation completeness, code alignment, service type, and historical claim patterns.</p></div>
@@ -64,19 +68,22 @@ Coverage clarified before care</pre>
 <div class="grid"><img src="images/issue_rate_by_service.png"><img src="images/risk_score_distribution.png"></div>
 <div style="margin-top:18px"><img src="images/subgroup_monitoring.png"></div></section>
 
-<section class="card"><div class="kicker">What the model actually does</div><h2>The alert threshold is a staffing decision.</h2>
-<p>On held-out synthetic data the model reaches an ROC AUC of 0.77. At the default classification threshold of 0.50 it also misses roughly three out of five preventable issues, because that default optimizes for overall accuracy rather than for catching problems before care.</p>
+<section class="card"><div class="kicker">What the model actually does</div><h2>Trust is the scarce resource.</h2>
+<p>On held-out synthetic data the model reaches an ROC AUC of 0.77. The design favors <strong>precision over recall</strong>: fewer alerts, more of them real. Staff quickly learn to ignore a system that raises too many false alarms, and an ignored alert prevents nothing.</p>
 <table style="width:100%;border-collapse:collapse;margin:18px 0">
 <tr style="text-align:left;border-bottom:2px solid #14243d"><th style="padding:8px">Threshold</th><th style="padding:8px">Recall</th><th style="padding:8px">Precision</th><th style="padding:8px">Cases sent to review</th></tr>
 <tr style="border-bottom:1px solid #e4e8ed"><td style="padding:8px">0.20</td><td style="padding:8px">0.76</td><td style="padding:8px">0.40</td><td style="padding:8px">46%</td></tr>
 <tr style="border-bottom:1px solid #e4e8ed"><td style="padding:8px">0.30</td><td style="padding:8px">0.56</td><td style="padding:8px">0.45</td><td style="padding:8px">30%</td></tr>
 <tr style="border-bottom:1px solid #e4e8ed"><td style="padding:8px">0.40</td><td style="padding:8px">0.49</td><td style="padding:8px">0.58</td><td style="padding:8px">20%</td></tr>
-<tr><td style="padding:8px">0.50</td><td style="padding:8px">0.39</td><td style="padding:8px">0.66</td><td style="padding:8px">14%</td></tr>
+<tr style="font-weight:bold"><td style="padding:8px">0.50 (default)</td><td style="padding:8px">0.39</td><td style="padding:8px">0.66</td><td style="padding:8px">14%</td></tr>
 </table>
-<p>Catching three-quarters of issues means reviewing nearly half of all appointments. That is a hiring question and an institutional judgment about the cost of a missed issue against the cost of an unnecessary review. It belongs to the workflow owner, not to a library default.</p></section>
+<p>At 0.50, two out of three alerts are real and 14% of cases go to review. Catching three-quarters of issues would mean reviewing nearly half of all appointments, with most alerts false. The cost of the precision-first choice is real: about three in five issues are not flagged, and those misses may not fall evenly across patient groups, which is why subgroup monitoring and a low-confidence escalation path are built in. The threshold belongs to the workflow owner, not to a library default.</p></section>
 
-<section class="card"><div class="kicker">Pilot</div><h2>An ambitious 18-month implementation test</h2>
-<p>The original proposal asked for an 18-month pilot across 25 hospitals and 500 clinics. Instructor feedback challenged the scale and absence of cost figures. This version responds with phased deployment, resource categories, explicit privacy planning, and scale gates tied to governance readiness.</p></section>
+<section class="card"><div class="kicker">Who decides</div><h2>CMS, insurers, and providers</h2>
+<p>CMS and participating insurers would fund and govern the pilot. Insurers employ the claims specialists; hospitals and clinics schedule care and submit prior-authorization requests. The hardest challenge is institutional: if the system works, it prevents denials insurers would otherwise not pay. Insurers stay in only if fewer appeals, less rework, member satisfaction, and regulatory goodwill outweigh that cost.</p></section>
+
+<section class="card"><div class="kicker">Pilot</div><h2>An 18-month implementation test</h2>
+<p>An 18-month pilot across 25 hospitals and 500 clinics, in three phases: planning and design (months 1–6), integration and go-live (months 7–12), and evaluation and decision (months 13–18), with results reported to CMS and insurers. Instructor feedback challenged the scale and absence of cost figures, so this version adds a governance check between phases, resource categories, and explicit privacy planning. Expansion happens only if the pilot succeeds.</p></section>
 
 <section class="card"><div class="kicker">Why now</div><h2>Responsible deployment is a design decision.</h2>
 <p>Healthcare organizations are rapidly adopting AI-assisted tools while governance expectations are evolving. The opportunity is to shape responsible workflows before opaque automation becomes normalized.</p></section>

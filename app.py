@@ -109,22 +109,50 @@ page = st.sidebar.radio(
 # --------------------------------------------------------------------------
 if page == "Overview":
     st.header("Project Overview")
+    st.info(
+        "**Who this demo is for:** insurer claims teams, hospital intake and prior-authorization "
+        "staff, analysts, and the CMS and insurer leaders who would approve a pilot. "
+        "It is a staff-side concept, not a patient-facing tool."
+    )
     st.write(
-        "Coverage Navigator forecasts whether a scheduled service may encounter a preventable "
-        "coverage issue before care is delivered. The system flags risk and explains the likely "
-        "drivers; a claims specialist verifies the case against benefit documents and makes the "
-        "final call."
+        "Coverage Navigator forecasts whether a scheduled service may run into a preventable "
+        "coverage issue before care is delivered. It finds similar past cases and patterns, "
+        "flags risk, and explains the likely reasons. An insurer claims specialist verifies the "
+        "case against the member's benefit documents and makes the final call."
     )
 
+    st.subheader("Why it matters")
+    s1, s2, s3 = st.columns(3)
+    s1.metric("Americans carrying medical debt", "100M")
+    s1.caption("Levey, 2022")
+    s2.metric("Privately insured adults who correctly understand their insurance", "14%")
+    s2.caption("Loewenstein et al., 2013")
+    s3.metric("Denied claims that are appealed", "<1%")
+    s3.caption("Claxton et al., 2025")
+    st.write(
+        "Today most coverage problems surface after care, when the claim is denied and the "
+        "patient receives an unexpected bill. Coverage Navigator moves that check to before care."
+    )
+
+    st.subheader("Demo data")
     c1, c2, c3 = st.columns(3)
     c1.metric("Synthetic cases", f"{len(df):,}")
     c2.metric("Synthetic issue rate", f"{df['preventable_coverage_issue'].mean():.1%}")
     c3.metric("Human final decision", "Required")
 
-    st.subheader("Conceptual workflow")
-    st.code(
-        "Appointment → Coverage review → AI risk forecast → Explanation → "
-        "Claims specialist → Verify benefits → Resolve / escalate"
+    st.subheader("Workflow")
+    st.markdown(
+        """
+1. **Appointment scheduled** at a pilot hospital or clinic.
+2. **Coverage Navigator reviews the case** in the background, inside the intake system staff already use.
+3. **One of three paths:**
+   - low risk → nothing changes, the appointment proceeds;
+   - high risk → the case is routed to the insurer's claims specialist queue;
+   - low confidence (new plan product, missing history, conflicting documentation) → **escalated** for human review instead of scored.
+4. **Insurer claims specialist reviews** the flag against benefit documents, then agrees or overrides it with a reason.
+5. **Specialist contacts the hospital's intake or prior-authorization team**; the hospital submits what is missing and the insurer's prior-authorization team reviews it.
+6. **Coverage clarified, then care delivered**, without a surprise denial.
+        """
     )
 
     st.subheader("What success means")
@@ -155,11 +183,18 @@ elif page == "Coverage Review":
         benefit_limit = st.checkbox("Potential benefit limit")
         hist = st.slider("Historical denial-rate proxy", 0.01, 0.60, 0.18, 0.01)
 
+        st.subheader("Data quality")
+        st.caption("Situations where the model should not be trusted to score the case on its own.")
+        new_product = st.checkbox("New insurance product (limited historical data)")
+        missing_history = st.checkbox("Missing or outdated patient history")
+        conflicting_docs = st.checkbox("Conflicting documentation (notes and codes don't align)")
+
         threshold = st.slider(
             "Alert threshold",
-            0.10, 0.90, 0.30, 0.05,
+            0.10, 0.90, 0.50, 0.05,
             help="Cases at or above this risk score are routed to a specialist. "
-                 "Lowering it catches more issues and creates more review work.",
+                 "The default favors fewer, more reliable alerts so staff keep trusting them. "
+                 "Lowering it catches more issues but adds many false alarms.",
         )
 
     case = pd.DataFrame([{
@@ -183,7 +218,10 @@ elif page == "Coverage Review":
 
     with right:
         st.subheader("AI-assisted forecast")
-        st.metric("Synthetic coverage-issue risk", f"{risk:.0%}")
+        if not (new_product or missing_history or conflicting_docs):
+            st.metric("Synthetic coverage-issue risk", f"{risk:.0%}")
+        else:
+            st.metric("Synthetic coverage-issue risk", "Abstained")
         st.caption(f"Source: {source}")
 
         reasons = []
@@ -200,7 +238,23 @@ elif page == "Coverage Review":
         if hist > 0.30:
             reasons.append("Similar historical cases show elevated denial rates.")
 
-        if risk >= threshold:
+        low_conf = []
+        if new_product:
+            low_conf.append("New insurance product with limited historical data.")
+        if missing_history:
+            low_conf.append("Patient history is missing or outdated.")
+        if conflicting_docs:
+            low_conf.append("Clinical notes and codes do not align.")
+        if low_conf:
+            st.warning(
+                "**Low confidence: escalate for human review.** The model abstains here "
+                "instead of giving a normal score, because the data it would rely on is "
+                "missing or unreliable. A senior claims specialist should review this case early."
+            )
+            for r in low_conf:
+                st.write("• " + r)
+            st.caption(f"For reference only, the raw score would have been {risk:.0%}.")
+        elif risk >= threshold:
             st.error(f"Routed for review — risk is at or above the {threshold:.0%} threshold.")
         else:
             st.success(f"Below the {threshold:.0%} threshold — not routed in this scenario.")
@@ -212,16 +266,18 @@ elif page == "Coverage Review":
         else:
             st.write("No rule-based contributing factors identified.")
 
-        if risk >= threshold:
+        if risk >= threshold and not low_conf:
             st.info(
-                "Recommended action: route to a claims specialist for verification against the "
-                "member's benefit documents before care."
+                "Recommended action: route to the insurer's claims specialist, who verifies the "
+                "case against the member's benefit documents and contacts the hospital's intake "
+                "or prior-authorization team before care."
             )
 
     st.caption(
         "Forecast only — not automated decision-making. A human specialist remains responsible "
-        "for verification and the final determination. Note that a case can score below the "
-        "threshold and still carry a real issue; the threshold controls workload, not truth."
+        "for verification and the final determination. A case can score below the threshold "
+        "and still carry a real issue: the default threshold deliberately accepts some missed "
+        "cases in exchange for alerts that staff can trust."
     )
 
 
@@ -230,9 +286,16 @@ elif page == "Coverage Review":
 # --------------------------------------------------------------------------
 elif page == "Specialist Dashboard":
     st.header("Specialist Dashboard")
-    st.write("Synthetic queue of cases prioritized for human review.")
+    st.write(
+        "Synthetic work queue for an **insurer claims specialist**: the cases the model routed "
+        "for review before care, highest risk first."
+    )
 
-    threshold = st.slider("Show cases above risk score", 0.10, 0.90, 0.30, 0.05)
+    threshold = st.slider(
+        "Show cases above risk score", 0.10, 0.90, 0.50, 0.05,
+        help="Default 0.50: fewer, more reliable alerts. Lower it to see how fast the queue "
+             "grows and how many more alerts turn out to be false alarms.",
+    )
 
     scored = df.copy()
     if model is not None:
@@ -258,22 +321,62 @@ elif page == "Specialist Dashboard":
 
     st.caption(
         f"Scores from: {score_label}. Lowering the threshold captures more issues but enlarges "
-        "the queue — the trade-off a real deployment has to staff for."
+        "the queue and lowers precision. When most alerts are false alarms, staff stop trusting "
+        "them, so the default favors precision."
     )
 
-    display = queue.head(50).copy()
-    display["risk"] = display["risk"].round(3)
-    st.dataframe(
-        display[[
-            "case_id", "service_type", "plan_type", "network_status",
-            "risk", "explanation",
-        ]],
-        width="stretch",
+    st.subheader("Review queue")
+    st.caption(
+        "Try it: set a status, choose Agree or Override, and give a reason for overrides. "
+        "In the pilot, overrides feed back into the model and the override rate is tracked."
     )
+
+    display = queue.head(25).copy()
+    display["risk"] = display["risk"].round(2)
+    display["status"] = "New"
+    display["specialist_decision"] = "Not reviewed"
+    display["override_reason"] = ""
+    display = display[[
+        "case_id", "service_type", "plan_type", "network_status", "risk", "explanation",
+        "status", "specialist_decision", "override_reason",
+    ]]
+
+    edited = st.data_editor(
+        display,
+        width="stretch",
+        hide_index=True,
+        key=f"queue_{threshold:.2f}",
+        disabled=["case_id", "service_type", "plan_type", "network_status", "risk", "explanation"],
+        column_config={
+            "risk": st.column_config.NumberColumn("Risk", format="%.2f"),
+            "explanation": st.column_config.TextColumn("Why flagged", width="large"),
+            "status": st.column_config.SelectboxColumn(
+                "Status",
+                options=["New", "Provider contacted", "Prior auth submitted", "Resolved", "Escalated"],
+            ),
+            "specialist_decision": st.column_config.SelectboxColumn(
+                "Specialist decision", options=["Not reviewed", "Agree", "Override"],
+            ),
+            "override_reason": st.column_config.TextColumn("Override reason"),
+        },
+    )
+
+    reviewed = edited[edited["specialist_decision"] != "Not reviewed"]
+    overrides = (edited["specialist_decision"] == "Override").sum()
+    missing_reason = (
+        (edited["specialist_decision"] == "Override")
+        & (edited["override_reason"].fillna("").str.strip() == "")
+    ).sum()
+    r1, r2, r3 = st.columns(3)
+    r1.metric("Reviewed", f"{len(reviewed)} of {len(edited)}")
+    r2.metric("Override rate", f"{overrides / len(reviewed):.0%}" if len(reviewed) else "—")
+    r3.metric("Resolved before care", f"{(edited['status'] == 'Resolved').sum()}")
+    if missing_reason:
+        st.warning(f"{missing_reason} override(s) have no reason. Every override needs one for the audit record.")
 
     st.caption(
-        "In a real implementation, reviewers would verify benefit documents, document an action, "
-        "and create an auditable record of overrides and escalations."
+        "Decisions entered here are not saved; refreshing the page clears them. A real system "
+        "would keep an auditable record of every decision, override, and escalation."
     )
 
 
@@ -301,8 +404,15 @@ elif page == "Model & Governance":
 
         st.subheader("Model role")
         st.write(
-            "The model forecasts risk and provides an explanation. It does not make a final "
-            "coverage determination."
+            "The model does not read plan rules. It learns from past claims outcomes, finds "
+            "cases and patterns similar to the new one, forecasts risk, and explains the "
+            "likely reasons. It never makes a coverage determination."
+        )
+        st.write(
+            "Because it learns from claims outcomes, it can pick up billing and coding habits "
+            "rather than true coverage rules. Real denial labels are also noisy: in public "
+            "marketplace data, the most common denial reason is a vague \"other\", at about a "
+            "third of denials. This is one reason every flag is verified by a person."
         )
 
     with right:
@@ -333,18 +443,23 @@ elif page == "Model & Governance":
         )
 
     if metrics:
-        st.subheader("Where the threshold sets the workload")
+        st.subheader("Choosing the alert threshold")
         st.write(
-            "Choosing an alert threshold decides how much of the caseload a specialist team "
-            "must review. It is a staffing decision as much as a modelling one."
+            "The design favors **precision over recall**: fewer alerts, more of them real. "
+            "Trust, not information, is the scarce resource. Frontline staff quickly learn to "
+            "ignore a system that raises too many false alarms, and once they do, it stops "
+            "preventing anything."
         )
         sweep = pd.DataFrame(metrics["threshold_sweep"])
         sweep.columns = ["Threshold", "Recall", "Precision", "Share of cases flagged"]
         st.dataframe(sweep, width="stretch", hide_index=True)
         st.caption(
             f"Held-out test set, n={metrics['n_test']}. ROC AUC {metrics['roc_auc']}. "
-            "At the default 0.5 threshold this model misses most true issues — which is why "
-            "the threshold belongs to the workflow owner, not the default setting."
+            "At 0.50, two out of three alerts are real issues and 14% of cases go to review. "
+            "The cost is real: about three in five preventable issues are not flagged, and those "
+            "missed cases may not be spread evenly across patient groups. That is why subgroup "
+            "monitoring and the low-confidence escalation path are part of the design. The "
+            "threshold is set and revisited by the workflow owner, not left to a default."
         )
 
         st.subheader("Subgroup performance")
@@ -358,6 +473,21 @@ elif page == "Model & Governance":
         )
     else:
         st.info("Run `python src/train_model.py` to populate model metrics on this page.")
+
+    st.subheader("Who is involved, and the incentive problem")
+    st.write(
+        """
+        - **CMS and participating insurers** would jointly fund and govern the pilot.
+        - **Insurers** employ the claims specialists and run their own prior-authorization review.
+        - **Hospitals and clinics** schedule care and submit prior-authorization requests through their own intake teams.
+
+        The hardest challenge is institutional, not technical. If the system works, it prevents
+        denials that insurers would otherwise not pay, which can raise their costs. Insurers are
+        likely to stay in only if fewer appeals, less rework, member satisfaction, and regulatory
+        goodwill outweigh that cost. If the balance shifts, they may slow data sharing or leave
+        the pilot, even if the model performs well.
+        """
+    )
 
     st.subheader("Synthetic monitoring example")
     subgroup = df.groupby("language_group")["preventable_coverage_issue"].mean()

@@ -49,8 +49,7 @@ Trained with `src/train_model.py` on a 75/25 split. Held-out test set: n=450.
 
 **ROC AUC: 0.77**
 
-The single most important finding is that the default classification threshold
-is wrong for this use case:
+The single most important design choice is the alert threshold:
 
 | Threshold | Recall | Precision | Share of cases flagged |
 |---|---|---|---|
@@ -62,17 +61,29 @@ is wrong for this use case:
 | 0.50 | 0.39 | 0.66 | 0.14 |
 | 0.60 | 0.22 | 0.75 | 0.07 |
 
-At the library default of 0.50 the model misses roughly three out of five
-preventable issues. Recall only becomes acceptable for a prevention system at
-much lower thresholds, and those thresholds route between a third and a half of
-all appointments to human review.
+The demo uses **0.50** and deliberately favors precision over recall. At 0.50,
+two out of three alerts are real issues and 14% of cases go to review. Lower
+thresholds catch more issues, but most of their alerts are false alarms, and
+staff who see mostly false alarms stop trusting the system. An ignored alert
+prevents nothing.
 
-This is the central governance point of the project in numeric form. The
-threshold is not a hyperparameter to be tuned for a leaderboard metric. It
-determines how many specialists an organization must staff, and it encodes an
-institutional judgment about the relative cost of a missed coverage issue
-versus an unnecessary review. That judgment belongs to the workflow owner and
-should be documented, revisited, and audited — not inherited from a default.
+The cost of this choice is stated openly: at 0.50 the model misses roughly
+three out of five preventable issues, and the missed cases may not be spread
+evenly across patient groups. Subgroup monitoring and the low-confidence
+escalation path exist to watch for that.
+
+The threshold is not a hyperparameter to be tuned for a leaderboard metric. It
+determines how many specialists an insurer must staff, and it encodes an
+institutional judgment about the cost of a missed coverage issue versus an
+unnecessary review. That judgment belongs to the workflow owner and should be
+documented, revisited during the pilot, and audited, not inherited from a
+library default.
+
+## Abstention
+
+The model abstains instead of scoring when the case involves a new insurance
+product with limited history, missing or outdated patient history, or
+conflicting documentation. Those cases are escalated to a human early.
 
 ## Subgroup Results and Why They Are Not a Fairness Claim
 

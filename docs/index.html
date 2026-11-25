@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coverage Navigator</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f6f8fb;color:#182333;line-height:1.6}
+header{background:#14243d;color:white;padding:70px 24px;text-align:center}
+header h1{font-size:3rem;margin:0 0 10px}.container{max-width:1050px;margin:auto;padding:34px 24px}
+.card{background:white;border-radius:14px;padding:28px;margin:20px 0;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.kicker{text-transform:uppercase;letter-spacing:.08em;font-weight:bold;font-size:.8rem;color:#58708a}
+h2{margin-top:0;color:#14243d}img{max-width:100%;border-radius:10px;border:1px solid #e4e8ed}
+pre{background:#eef2f6;padding:18px;border-radius:8px;overflow:auto}.quote{font-size:1.2rem;font-style:italic;border-left:4px solid #9aacbe;padding-left:16px}
+.badge{display:inline-block;background:#e9eef5;padding:5px 10px;border-radius:16px;margin:4px}
+footer{text-align:center;padding:35px;color:#65717e}
+.links{margin-top:26px}
+.links a{display:inline-block;background:#ffffff;color:#14243d;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:8px;margin:6px}
+.links a.ghost{background:transparent;color:#ffffff;border:1px solid rgba(255,255,255,.5)}
+.links a:hover{opacity:.85}
+.links a:focus-visible{outline:3px solid #ffd166;outline-offset:3px}
+</style>
+</head>
+<body>
+<header>
+<div style="text-transform:uppercase;letter-spacing:.1em;font-size:.85rem">AI + Healthcare + Policy</div>
+<h1>Coverage Navigator</h1>
+<p>AI-assisted pre-service coverage decision support designed to identify preventable coverage issues before care while keeping humans accountable for every final decision.</p>
+<div class="links">
+<a href="#">Try the live demo</a>
+<a class="ghost" href="#">View the code</a>
+</div>
+</header>
+<div class="container">
+<section class="card"><div class="kicker">The problem</div><h2>Coverage can fail before the claim is ever submitted.</h2>
+<p>The project began with medical debt and narrowed to the health-insurance understanding gap. Coverage Navigator moves the intervention upstream by asking whether potential coverage issues can be identified before care is delivered.</p></section>
+
+<section class="card"><div class="kicker">How it works</div><h2>Forecast. Explain. Verify.</h2>
+<pre>Appointment scheduled
+        ↓
+Coverage information reviewed
+        ↓
+AI-assisted risk forecast
+        ↓
+Potential issue flagged + explanation
+        ↓
+Claims specialist review
+        ↓
+Verify benefit documents
+        ↓
+Resolve / contact provider / escalate
+        ↓
+Coverage clarified before care</pre>
+<p><strong>The model does not make the final coverage decision.</strong> It forecasts risk and explains why a case may need review. A human specialist verifies the case and remains accountable.</p></section>
+
+<section class="grid">
+<div class="card"><div class="kicker">Input</div><h2>Model signals</h2><p>Plan information, prior authorization, network status, documentation completeness, code alignment, service type, and historical claim patterns.</p></div>
+<div class="card"><div class="kicker">Governance</div><h2>Human-in-the-loop</h2><p>Human review, audit logs, data-quality checks, subgroup monitoring, escalation, and abstention when confidence is insufficient.</p></div>
+<div class="card"><div class="kicker">Evaluation</div><h2>Beyond accuracy</h2><p>Fairness, workflow adoption, patient experience, alert utility, privacy compliance, and organizational capacity matter alongside technical performance.</p></div>
+</section>
+
+<section class="card"><div class="kicker">Synthetic analysis</div><h2>Portfolio demonstration data</h2>
+<p>The figures below use synthetic data only and illustrate the monitoring a real pilot could require.</p>
+<div class="grid"><img src="images/issue_rate_by_service.png"><img src="images/risk_score_distribution.png"></div>
+<div style="margin-top:18px"><img src="images/subgroup_monitoring.png"></div></section>
+
+<section class="card"><div class="kicker">What the model actually does</div><h2>The alert threshold is a staffing decision.</h2>
+<p>On held-out synthetic data the model reaches an ROC AUC of 0.77. At the default classification threshold of 0.50 it also misses roughly three out of five preventable issues, because that default optimizes for overall accuracy rather than for catching problems before care.</p>
+<table style="width:100%;border-collapse:collapse;margin:18px 0">
+<tr style="text-align:left;border-bottom:2px solid #14243d"><th style="padding:8px">Threshold</th><th style="padding:8px">Recall</th><th style="padding:8px">Precision</th><th style="padding:8px">Cases sent to review</th></tr>
+<tr style="border-bottom:1px solid #e4e8ed"><td style="padding:8px">0.20</td><td style="padding:8px">0.76</td><td style="padding:8px">0.40</td><td style="padding:8px">46%</td></tr>
+<tr style="border-bottom:1px solid #e4e8ed"><td style="padding:8px">0.30</td><td style="padding:8px">0.56</td><td style="padding:8px">0.45</td><td style="padding:8px">30%</td></tr>
+<tr style="border-bottom:1px solid #e4e8ed"><td style="padding:8px">0.40</td><td style="padding:8px">0.49</td><td style="padding:8px">0.58</td><td style="padding:8px">20%</td></tr>
+<tr><td style="padding:8px">0.50</td><td style="padding:8px">0.39</td><td style="padding:8px">0.66</td><td style="padding:8px">14%</td></tr>
+</table>
+<p>Catching three-quarters of issues means reviewing nearly half of all appointments. That is a hiring question and an institutional judgment about the cost of a missed issue against the cost of an unnecessary review. It belongs to the workflow owner, not to a library default.</p></section>
+
+<section class="card"><div class="kicker">Pilot</div><h2>An ambitious 18-month implementation test</h2>
+<p>The original proposal asked for an 18-month pilot across 25 hospitals and 500 clinics. Instructor feedback challenged the scale and absence of cost figures. This version responds with phased deployment, resource categories, explicit privacy planning, and scale gates tied to governance readiness.</p></section>
+
+<section class="card"><div class="kicker">Why now</div><h2>Responsible deployment is a design decision.</h2>
+<p>Healthcare organizations are rapidly adopting AI-assisted tools while governance expectations are evolving. The opportunity is to shape responsible workflows before opaque automation becomes normalized.</p></section>
+
+<section class="card"><div class="kicker">Instructor feedback</div>
+<p class="quote">“One of the strongest submissions I received.”</p>
+<p>The feedback highlighted the clear executive ask, strong explanation of forecasting versus automated decision-making, specific risk mitigations, human verification, and evaluation beyond model accuracy. It also identified concrete next steps: cost, urgency, privacy, and pilot realism.</p></section>
+
+<section class="card"><div class="kicker">Core lesson</div><h2>The model is not the intervention.</h2>
+<p>Technical performance may justify a pilot. Long-term public value depends on governance, incentives, workflow integration, user trust, accountability, and the capacity to monitor and adapt the system over time.</p>
+<span class="badge">Responsible AI</span><span class="badge">Healthcare AI</span><span class="badge">Human-in-the-Loop</span><span class="badge">Policy Analysis</span><span class="badge">AI Governance</span>
+</section>
+</div>
+<footer>Coverage Navigator — Academic portfolio project using synthetic data.</footer>
+</body></html>

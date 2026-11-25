@@ -1,0 +1,80 @@
+{
+  "n_train": 1350,
+  "n_test": 450,
+  "roc_auc": 0.766,
+  "at_default_threshold_0_5": {
+    "accuracy": 0.804,
+    "precision": 0.656,
+    "recall": 0.389
+  },
+  "threshold_sweep": [
+    {
+      "threshold": 0.15,
+      "recall": 0.824,
+      "precision": 0.333,
+      "share_of_cases_flagged": 0.593
+    },
+    {
+      "threshold": 0.2,
+      "recall": 0.759,
+      "precision": 0.396,
+      "share_of_cases_flagged": 0.46
+    },
+    {
+      "threshold": 0.25,
+      "recall": 0.694,
+      "precision": 0.446,
+      "share_of_cases_flagged": 0.373
+    },
+    {
+      "threshold": 0.3,
+      "recall": 0.565,
+      "precision": 0.452,
+      "share_of_cases_flagged": 0.3
+    },
+    {
+      "threshold": 0.4,
+      "recall": 0.491,
+      "precision": 0.582,
+      "share_of_cases_flagged": 0.202
+    },
+    {
+      "threshold": 0.5,
+      "recall": 0.389,
+      "precision": 0.656,
+      "share_of_cases_flagged": 0.142
+    },
+    {
+      "threshold": 0.6,
+      "recall": 0.222,
+      "precision": 0.75,
+      "share_of_cases_flagged": 0.071
+    }
+  ],
+  "subgroups": {
+    "English": {
+      "n": 331,
+      "base_rate": 0.23,
+      "roc_auc": 0.735,
+      "estimate_is_stable": true
+    },
+    "French": {
+      "n": 27,
+      "base_rate": 0.222,
+      "roc_auc": 0.802,
+      "estimate_is_stable": false
+    },
+    "Other": {
+      "n": 39,
+      "base_rate": 0.359,
+      "roc_auc": 0.811,
+      "estimate_is_stable": false
+    },
+    "Spanish": {
+      "n": 53,
+      "base_rate": 0.226,
+      "roc_auc": 0.947,
+      "estimate_is_stable": false
+    }
+  }
+}
